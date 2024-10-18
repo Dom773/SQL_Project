@@ -12,123 +12,62 @@ SELECT * FROM sales;
 -- How many people in each city are estimated to consume coffee, given that 25% of the population does?
 
 SELECT 
-	city_name,
-	ROUND(
-	(population * 0.25)/1000000, 
-	2) as coffee_consumers_in_millions,
-	city_rank
-FROM city
-ORDER BY 2 DESC
+    city_name, 
+    population, 
+    CAST(population AS INT) * 0.25 AS estimated_coffee_consumers
+FROM 
+    city;
 
--- -- Q.2
--- Total Revenue from Coffee Sales
+-- -- Q.2 Total Revenue from Coffee Sales
 -- What is the total revenue generated from coffee sales across all cities in the last quarter of 2023?
 
-
 SELECT 
-	SUM(total) as total_revenue
-FROM sales
+    SUM(s.total) AS total_revenue
+FROM 
+    sales s
+JOIN 
+    products p ON s.product_id = p.product_id
 WHERE 
-	EXTRACT(YEAR FROM sale_date)  = 2023
-	AND
-	EXTRACT(quarter FROM sale_date) = 4
+    p.product_name LIKE '%Coffee%' 
+    AND s.sale_date BETWEEN '2023-10-01' AND '2023-12-31';
 
-
-
-SELECT 
-	ci.city_name,
-	SUM(s.total) as total_revenue
-FROM sales as s
-JOIN customers as c
-ON s.customer_id = c.customer_id
-JOIN city as ci
-ON ci.city_id = c.city_id
-WHERE 
-	EXTRACT(YEAR FROM s.sale_date)  = 2023
-	AND
-	EXTRACT(quarter FROM s.sale_date) = 4
-GROUP BY 1
-ORDER BY 2 DESC
-
-
--- Q.3
--- Sales Count for Each Product
+-- Q.3 Sales Count for Each Product
 -- How many units of each coffee product have been sold?
 
 SELECT 
-	p.product_name,
-	COUNT(s.sale_id) as total_orders
-FROM products as p
-LEFT JOIN
-sales as s
-ON s.product_id = p.product_id
-GROUP BY 1
-ORDER BY 2 DESC
-
--- Q.4
--- Average Sales Amount per City
--- What is the average sales amount per customer in each city?
-
--- city abd total sale
--- no cx in each these city
-
-
-SELECT 
-	ci.city_name,
-	SUM(s.total) as total_revenue,
-	COUNT(DISTINCT s.customer_id) as total_cx,
-	ROUND(
-			SUM(s.total)::numeric/
-				COUNT(DISTINCT s.customer_id)::numeric
-			,2) as avg_sale_pr_cx
-	
-FROM sales as s
-JOIN customers as c
-ON s.customer_id = c.customer_id
-JOIN city as ci
-ON ci.city_id = c.city_id
-GROUP BY 1
-ORDER BY 2 DESC
-
-
--- -- Q.5
--- City Population and Coffee Consumers (25%)
--- Provide a list of cities along with their populations and estimated coffee consumers.
--- return city_name, total current cx, estimated coffee consumers (25%)
-
-WITH city_table as 
-(
-	SELECT 
-		city_name,
-		ROUND((population * 0.25)/1000000, 2) as coffee_consumers
-	FROM city
-),
-customers_table
-AS
-(
-	SELECT 
-		ci.city_name,
-		COUNT(DISTINCT c.customer_id) as unique_cx
-	FROM sales as s
-	JOIN customers as c
-	ON c.customer_id = s.customer_id
-	JOIN city as ci
-	ON ci.city_id = c.city_id
-	GROUP BY 1
-)
-SELECT 
-	customers_table.city_name,
-	city_table.coffee_consumers as coffee_consumer_in_millions,
-	customers_table.unique_cx
-FROM city_table
+    p.product_name, 
+    COUNT(s.sale_id) AS units_sold
+FROM 
+    sales s
 JOIN 
-customers_table
-ON city_table.city_name = customers_table.city_name
+    products p ON s.product_id = p.product_id
+WHERE 
+    p.product_name LIKE '%Coffee%'
+GROUP BY 
+    p.product_name;
 
+-- Q.4 Average Sales Amount per City
+-- Calculate the average sales amount per customer for each city?
 
+SELECT c.city_name, AVG(s.total) AS avg_sales_per_customer
+FROM sales s
+JOIN customers cu ON s.customer_id = cu.customer_id
+JOIN city c ON cu.city_id = c.city_id
+GROUP BY c.city_name
+ORDER BY avg_sales_per_customer DESC;
 
--- -- Q6
--- Top Selling Products by City
+-- -- Q.5 City Population and Coffee Consumers (25%)
+-- Provide a list of cities along with their populations and estimated coffee consumers.
+--return city_name, total current cx, estimated coffee consumers (25%)
+
+SELECT 
+    c.city_name, 
+    CAST(c.population AS INT) AS total_current_cx, 
+    ROUND(CAST(c.population AS INT) * 0.25) AS estimated_coffee_consumers
+FROM 
+    city c;
+
+-- -- Q6 Top Selling Products by City
 -- What are the top 3 selling products in each city based on sales volume?
 
 SELECT * 
@@ -149,16 +88,12 @@ FROM -- table
 	GROUP BY 1, 2
 	-- ORDER BY 1, 3 DESC
 ) as t1
-WHERE rank <= 3
+WHERE rank <= 3;
 
 
 -- Q.7
 -- Customer Segmentation by City
 -- How many unique customers are there in each city who have purchased coffee products?
-
-SELECT * FROM products;
-
-
 
 SELECT 
 	ci.city_name,
@@ -171,7 +106,7 @@ JOIN sales as s
 ON s.customer_id = c.customer_id
 WHERE 
 	s.product_id IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
-GROUP BY 1
+GROUP BY 1;
 
 
 -- -- Q.8
